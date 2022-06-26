@@ -1,4 +1,4 @@
-SRC = main.c lib/flow.c
+SRC = main.c
 OUT = main
 FLAGS = -g -Wall -pedantic -lpthread
 

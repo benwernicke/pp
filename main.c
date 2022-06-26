@@ -6,8 +6,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 // name buffer
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -164,17 +168,18 @@ void out_structure(char* main_dir, name_buf_t* dir_buf)
 
 void copy_file(char* dest_name, char* src_name)
 {
-    FILE* dest = fopen(dest_name, "w");
-    FILE* src = fopen(src_name, "r");
+    int dest = open(dest_name, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    int src = open(src_name, O_RDONLY);
 
-    char c;
+    uint64_t len;
+    struct stat st;
+    stat(src_name, &st);
+    len = st.st_size;
 
-    while ((c = fgetc(src)) != EOF) {
-        fputc(c, dest);
-    }
+    sendfile(dest, src, 0, len);
 
-    fclose(dest);
-    fclose(src);
+    close(dest);
+    close(src);
 }
 
 void out_files(char* out_dir, name_buf_t* file_buf)
