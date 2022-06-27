@@ -39,8 +39,8 @@ int main(int argc, char** argv)
     char* compiler = argv[1];
 
 printf("compiling: ./main.c\n");
-run_command(compiler, "-c","-Ofast", "./main.c", "-o ./main.o");
+run_command(compiler, "-c","pp", "./main.c", "-o ./main.o");
 
-run_command(compiler, "-o pp", "-Ofast" , "./main.o");
+run_command(compiler, "-o pp", "pp" , "./main.o");
 return 0;
 }
