@@ -235,7 +235,7 @@ char static_instructions[] = "#include <stdarg.h>\n"
                              "    char* compiler = argv[1];\n"
                              "\n";
 
-void out_compile_instructions(char* out_dir, char* program_name, name_buf_t* file_buf)
+void out_compile_instructions(char* out_dir, char* program_name, char* flags, name_buf_t* file_buf)
 {
     file_name_t fn;
     file_name_init(&fn);
@@ -250,13 +250,13 @@ void out_compile_instructions(char* out_dir, char* program_name, name_buf_t* fil
         file_len = strlen(*file);
         if ((*file)[file_len - 1] == 'c') {
             fprintf(compile_file, "printf(\"compiling: %s\\n\");\n", *file);
-            fprintf(compile_file, "run_command(compiler, \"-c\",\"-Ofast\", \"%s\", ", *file);
+            fprintf(compile_file, "run_command(compiler, \"-c\",\"%s\", \"%s\", ",flags, *file);
             (*file)[file_len - 1] = 'o';
             fprintf(compile_file, "\"-o %s\");\n\n", *file);
         }
     }
 
-    fprintf(compile_file, "run_command(compiler, \"-o %s\", \"-Ofast\" ", program_name);
+    fprintf(compile_file, "run_command(compiler, \"-o %s\", \"%s\" ", program_name, flags);
 
     for (file = file_buf->buf; file != file_buf->buf + file_buf->used; file++) {
         file_len = strlen(*file);
@@ -273,7 +273,8 @@ void out_compile_instructions(char* out_dir, char* program_name, name_buf_t* fil
 
 int main(int argc, char** argv)
 {
-    panic_if(argc != 3, "wrong number of arguments");
+    // TODO: actual argument stuff
+    panic_if(argc != 4, "wrong number of arguments");
 
     name_buf_t* file_buf = nb_create(16);
     name_buf_t* dir_buf = nb_create(16);
@@ -284,7 +285,7 @@ int main(int argc, char** argv)
     out_structure(out, dir_buf);
     out_files(out, file_buf);
 
-    out_compile_instructions(out, argv[2], file_buf);
+    out_compile_instructions(out, argv[2], argv[2], file_buf);
 
     nb_free(file_buf);
     nb_free(dir_buf);
