@@ -285,7 +285,7 @@ int main(int argc, char** argv)
     out_structure(out, dir_buf);
     out_files(out, file_buf);
 
-    out_compile_instructions(out, argv[2], argv[2], file_buf);
+    out_compile_instructions(out, argv[2], argv[3], file_buf);
 
     nb_free(file_buf);
     nb_free(dir_buf);
