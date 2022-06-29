@@ -1,4 +1,6 @@
+#include "lib/hashset.h"
 #include "lib/panic.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -12,6 +14,9 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+
+hashset_t* exclude = NULL;
+hashset_t* include = NULL;
 
 // name buffer
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -250,7 +255,7 @@ void out_compile_instructions(char* out_dir, char* program_name, char* flags, na
         file_len = strlen(*file);
         if ((*file)[file_len - 1] == 'c') {
             fprintf(compile_file, "printf(\"compiling: %s\\n\");\n", *file);
-            fprintf(compile_file, "run_command(compiler, \"-c\",\"%s\", \"%s\", ",flags, *file);
+            fprintf(compile_file, "run_command(compiler, \"-c\",\"%s\", \"%s\", ", flags, *file);
             (*file)[file_len - 1] = 'o';
             fprintf(compile_file, "\"-o %s\");\n\n", *file);
         }
@@ -271,21 +276,92 @@ void out_compile_instructions(char* out_dir, char* program_name, char* flags, na
     file_name_uninit(&fn);
 }
 
+char default_out_dir[] = "package";
+char* out_dir = default_out_dir;
+
+void print_usage()
+{
+    char* usage = "pp - HELP PAGE\n"
+                  "--------------\n"
+                  "pp is a software packing tool. Run it in the project order to genertae a fully packed\n"
+                  " directory you can ship. Only a c compiler will be needed to compile the project\n"
+                  "pp --out-dir \"<out_dir>\" --exclude \"file1.c;file2.c\" --bin-name \"<name_of_later_binary>\""
+                  "\n\n"
+                  "-h / --help    show this page\n"
+                  "--out-dir      name of the output directory\n"
+                  "--bin-name     name of the compiled binary\n"
+                  "--exclude      exclude files which are not needed in later package\n";
+    puts(usage);
+    exit(0);
+}
+
+void parse_argv(char** argv)
+{
+    while (*argv) {
+        if (strcmp(*argv, "-exc") == 0) {
+            argv++;
+            panic_if(*argv == NULL, "missing argument for -exc");
+            hashset_set(exclude, *argv);
+        } else if (strcmp(*argv, "--exclude") == 0) {
+            argv++;
+            panic_if(*argv == NULL, "missing argument for --exclude");
+            hashset_set(exclude, *argv);
+        } else if (strcmp(*argv, "-inc") == 0) {
+            argv++;
+            panic_if(*argv == NULL, "missing argument for -inc");
+            hashset_set(include, *argv);
+        } else if (strcmp(*argv, "--include") == 0) {
+            argv++;
+            panic_if(*argv == NULL, "missing argument for --include");
+            hashset_set(include, *argv);
+        } else if (strcmp(*argv, "--help") == 0) {
+            print_usage();
+        } else if (strcmp(*argv, "-h") == 0) {
+            print_usage();
+        } else if (strcmp(*argv, "--name-of-executable") == 0) {
+        }
+        argv++;
+    }
+}
+
+uint64_t hash_str(char* s)
+{
+    uint64_t h = 0;
+    while (*s) {
+        h += *s;
+        s++;
+    }
+    return h;
+}
+
+bool cmp_str(char* s1, char* s2)
+{
+    return strcmp(s1, s2) == 0;
+}
+
 int main(int argc, char** argv)
 {
+    hashset_error_t err = hashset_create(&exclude, (hashset_hash_function_t)hash_str, (hashset_cmp_function_t)cmp_str, 100);
+    panic_if(err != HASHSET_SUCCESS, "could not create exclude hashset");
+    err = hashset_create(&include, (hashset_hash_function_t)hash_str, (hashset_cmp_function_t)cmp_str, 100);
+    panic_if(err != HASHSET_SUCCESS, "could not create include hashset");
+
+    parse_argv(argv);
     // TODO: actual argument stuff
     panic_if(argc != 4, "wrong number of arguments");
 
     name_buf_t* file_buf = nb_create(16);
     name_buf_t* dir_buf = nb_create(16);
 
-    push_all_files_in_directory(file_buf, dir_buf, argv[1]);
+    push_all_files_in_directory(file_buf, dir_buf, ".");
 
-    char* out = "package";
-    out_structure(out, dir_buf);
-    out_files(out, file_buf);
+    out_structure(out_dir, dir_buf);
+    out_files(out_dir, file_buf);
 
-    out_compile_instructions(out, argv[2], argv[3], file_buf);
+    out_compile_instructions(out_dir, argv[2], argv[3], file_buf);
+
+    hashset_free(exclude);
+    hashset_free(include);
 
     nb_free(file_buf);
     nb_free(dir_buf);
